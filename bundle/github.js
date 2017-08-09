@@ -1,5 +1,6 @@
 const term = require('terminal-kit').terminal;
-const GitHubApi   = require('github')
+//const GitHubApi   = require('github')
+const GitHubApi = require('octonode');
 const CLI = require('clui')
 const Spinner = CLI.Spinner;
 
@@ -21,7 +22,7 @@ function requireUsernameAndPassword(callback) {
         account.username = input;
 
         term(`${PS} password: `);
-        term.inputField({}, function(error, input) {
+        term.inputField({ echo: false }, function(error, input) {
             if (error) {
                 handleError(error);
             }
@@ -59,17 +60,9 @@ function createRepositoryForm(callback) {
 }
 
 function auth(config) {
-    const github = new GitHubApi({
-        version: '3.0.0'
-    });
-
     const token = config.get('token');
     if (token) {
-        github.authenticate({
-            type: 'oauth',
-            token: token
-        })
-        return github;
+        return GitHubApi.client(token)
     } 
     term.red(`${PS} you need to authenticate first`);
     return undefined
@@ -96,32 +89,25 @@ const interface = {
         requireUsernameAndPassword((account) => {
             const status = new Spinner(`Authenticating you, please wait...`);
             status.start();
-
-            const github = new GitHubApi({
-                version: '3.0.0'
-            });
             
             try {
-                github.authenticate(
-                    Object.assign({ type: 'basic' }, account)
-                );
+                const scopes =  {
+                    add_scopes: ['user', 'public_repo', 'repo'],
+                    note: 'devboy, github bundle tool'
+                }
+                const g = GitHubApi.auth.config(account)
 
-                github.authorization.create(
-                    {
-                        scope: ['user', 'public_repo', 'repo', 'repo:status'],
-                        note: 'devboy, github bundle tool'
-                    }, 
-                    function (error, response) {
+                g.login(scopes,
+                    function (error, id, token) {
                         status.stop();
-    
                         if (error) {
                             term.red(`${PS} ! error `);
                             console.error(error);
                             return next();
                         }
-                        if (response.data) {
-                            app.config.set('token', response.data.token);
-                            app.config.set('response', response.data);
+                        if (token) {
+                            app.config.set('token', token);
+                            term.yellow(`${PS} authenticated.`)
                         }
                         return next()
                     }
@@ -137,10 +123,16 @@ const interface = {
     },
 
     logout: function(params, next, app) {
-        term.red(`${PS} logouting ...`)
-        app.config.delete('token');
-        app.config.delete('response');
-        next();
+        const g = auth(app.config);
+        if (g) {
+            term.red(`${PS} logouting ...`)
+            app.config.delete('token');
+            app.config.delete('response');
+            next();
+        } else {
+            term.red(`${PS} you are not logged`);
+            next();
+        }
     },
 
     repositoryList: function(params, next, app) {
@@ -156,27 +148,23 @@ const interface = {
                         handleError(error);
                         return next();
                     }
-
                     displayRepository(data[selection.selectedIndex]);
                     next();
                 })
-
             }
 
             if (memory['getAll']) {
                 status.stop();
                 displayMenu(memory['getAll'])
             } else {
-                g.repos.getAll({
-                    affiliation: 'owner'
-                }, function(error, response) {
+                g.me().repos(function(error, data) {
                     status.stop();
                     if (error) {
                         handleError(error)
                         return next();
                     }
-                    memory['getAll'] = response.data;
-                    displayMenu(response.data)
+                    memory['getAll'] = data;
+                    displayMenu(data)
                 })
             }
 
@@ -192,15 +180,14 @@ const interface = {
                 if (repo) {
                     const status = new Spinner('Creating repository ...');
                     status.start();
-
-                    g.repos.create(repo, function(error, response) {
+                    g.me().repo(repo, function(error, response) {
                         status.stop();
                         if (error) {
                             handleError(error);
                             return next();
                         }
 
-                        displayRepository(response.data)
+                        displayRepository(response)
                         return next();
                     })
 

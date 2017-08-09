@@ -5,9 +5,13 @@
  * IMPORTS
  */
 const pkg = require('./package.json');
+const fs = require('fs');
+const path = require('path');
 const term = require('terminal-kit').terminal;
 const parser = require('yargs-parser')
 const Configstore = require('configstore')
+const clear  = require('clear');
+const figlet = require('figlet');
 
 /**
  * Helper functions 
@@ -17,13 +21,9 @@ function isFunction(obj) {
 };
 
 /*
- * List of bundles to include 
- */
-const bundles = ['string', 'github', 'store'];
-
-/*
  * Variables 
  */
+const bundleDirectory = './bundle';
 const autoComplete = [];
 const commands = {};
 const conf = new Configstore(pkg.name, {});
@@ -38,8 +38,8 @@ if (!conf.has('bundles')) {
 /**
  * Load all bundles
  */
-bundles.forEach((bundle) => {
-  const b = require(`./bundle/${bundle}`);
+fs.readdirSync(bundleDirectory).forEach((bundle) => {
+  const b = require(`./${bundleDirectory}/${bundle}`);
   (b.commands || []).forEach((command) => {
     autoComplete.push(`${b.name} ${command}`);
     commands[b.name] = b.parser;
@@ -121,4 +121,7 @@ function terminate() {
 }
 
 /* START */
+clear();
+term.red(figlet.textSync('Devboy', { horizontalLayout: 'full'}));
+term.yellow(`\nWorking directory: ${path.resolve(process.cwd())}`);
 loop();
