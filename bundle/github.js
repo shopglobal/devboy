@@ -12,25 +12,48 @@ function requireUsernameAndPassword(callback) {
         username: undefined,
         password: undefined
     };
-    const handleError = function(error, cb) {
-        term.red(`${PS} ! error `) 
-        console.error(error)
-        cb(account)
-    }
     term(`${PS} username: `);
     term.inputField({}, function(error, input) {
         if (error) {
-            handleError(error, callback);
+            handleError(error);
+            return callback(account)
         }
         account.username = input;
 
         term(`${PS} password: `);
         term.inputField({}, function(error, input) {
             if (error) {
-                handleError(error, callback);
+                handleError(error);
             }
             account.password = input;
             return callback(account)
+        })
+    })
+}
+
+function createRepositoryForm(callback) {
+    const newRepo = {
+        name: '',
+        description: '',
+        private: false,
+        auto_init: true,
+    }
+    term(`${PS} repository name: `)
+    term.inputField({}, function(error, input) {
+        if (error) {
+            handleError(error)
+            return callback()
+        }
+        newRepo.name = input;
+        term(`${PS} repository description: `)
+        term.inputField({}, function(error, input) {
+            if (error) {
+                handleError(error)
+                return callback()
+            }
+            newRepo.description = input;
+
+            callback(newRepo);
         })
     })
 }
@@ -52,8 +75,9 @@ function auth(config) {
     return undefined
 }
 
-function handleError() {
+function handleError(error) {
     term.red(`${PS} ! error `)
+    console.error(error)
 }
 
 function displayRepository(repo) {
@@ -119,7 +143,7 @@ const interface = {
         next();
     },
 
-    repository: function(params, next, app) {
+    repositoryList: function(params, next, app) {
         const g = auth(app.config)
         if (g) {
             const status = new Spinner(`requesting repositories...`);
@@ -129,8 +153,7 @@ const interface = {
                 term.yellow(`${PS} you got ${data.length} repositories \n`);
                 term.gridMenu(data.map((r) => r.name), (error, selection) => {
                     if (error) {
-                        handleError();
-                        console.error(error);
+                        handleError(error);
                         return next();
                     }
 
@@ -149,8 +172,7 @@ const interface = {
                 }, function(error, response) {
                     status.stop();
                     if (error) {
-                        handleError()
-                        console.error(error)
+                        handleError(error)
                         return next();
                     }
                     memory['getAll'] = response.data;
@@ -162,6 +184,36 @@ const interface = {
         } else {
             next()
         }
+    },
+    repositoryCreate: function(params, next, app) {
+        const g = auth(app.config)
+        if (g) {
+            createRepositoryForm((repo) => {
+                if (repo) {
+                    const status = new Spinner('Creating repository ...');
+                    status.start();
+
+                    g.repos.create(repo, function(error, response) {
+                        status.stop();
+                        if (error) {
+                            handleError(error);
+                            return next();
+                        }
+
+                        displayRepository(response.data)
+                        return next();
+                    })
+
+                } else {
+                    next();
+                }
+
+            }) 
+
+        } else {
+            next();
+        }
+
     }
 }
 
@@ -171,6 +223,7 @@ module.exports = {
   commands: [
     'authenticate',
     'repository',
+    'create',
     'logout'
   ],
   parser: function(command, params, next, app) {
@@ -178,7 +231,9 @@ module.exports = {
         case 'authenticate':
             return interface.authenticate(params, next, app)
         case 'repository':
-            return interface.repository(params, next, app)
+            return interface.repositoryList(params, next, app)
+        case 'create':
+            return interface.repositoryCreate(params, next, app)
         case 'logout':
             return interface.logout(params, next, app);
         default:
