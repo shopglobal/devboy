@@ -57,6 +57,7 @@ function commandContext(name) {
     conf.set(confPath, {});
   }
   const app = {
+    cwd: path.resolve(process.cwd()),
     config: {
       get: function(key) {
         return conf.get(`${confPath}.${key}`)

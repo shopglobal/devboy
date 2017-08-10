@@ -1,5 +1,4 @@
 const term = require('terminal-kit').terminal;
-//const GitHubApi   = require('github')
 const GitHubApi = require('octonode');
 const CLI = require('clui')
 const Spinner = CLI.Spinner;
