@@ -23,6 +23,7 @@
     "inquirer": "3.2.1",
     "lodash": "4.17.4",
     "minimist": "1.2.0",
+    "npm-keyword": "^4.2.0",
     "octonode": "^0.8.0",
     "preferences": "0.2.1",
     "simple-git": "1.75.0",
