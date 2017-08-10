@@ -77,7 +77,16 @@ function displayRepository(repo) {
     term(`\nName: ${repo.full_name}\n`);
     term(`Watchers: ${repo.watchers}, Forks: ${repo.forks} \n`)
     term(`Description: ${repo.description} \n`);
-    term.cyan(`${repo.clone_url}\n`);
+    term.cyan(`git clone ${repo.clone_url}\n`);
+}
+
+function displayGitHelp(repo) {
+    term.yellow(`\n---\nTo start using this repo:`)
+    term.yellow(`\ngit init`)
+    term.yellow(`\ngit remote add origin ${repo.clone_url}`);
+    term.yellow(`\ngit push -u origin master`);
+    term.yellow(`\ngit add .`);
+    term.yellow(`\ngit commit -m "init" -a`);
 }
 
 const interface = {
@@ -92,7 +101,7 @@ const interface = {
             
             try {
                 const scopes =  {
-                    add_scopes: ['user', 'public_repo', 'repo'],
+                    scopes: ['user', 'public_repo', 'repo'],
                     note: 'devboy, github bundle tool'
                 }
                 const g = GitHubApi.auth.config(account)
@@ -188,6 +197,7 @@ const interface = {
                         }
 
                         displayRepository(response)
+                        displayGitHelp(response)
                         return next();
                     })
 
