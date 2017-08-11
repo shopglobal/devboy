@@ -2,40 +2,35 @@ const term = require('terminal-kit').terminal;
 const Spinner = require('clui').Spinner
 const npmKeyword = require('npm-keyword');
 
+const UI = require('../libs/ui/form')
+
 const PS = `\n>>> Bundle`;
-
-function listPackage(pkg) {
-}
-
-Array.prototype.chunk = function(x) {
-    if (!this.length) {
-        return [];
-    }
-    return [this.slice(0, x)].concat(this.slice(x).chunk(x));
-}
 
 const interface = {
     install: function(params, next, app) {
-        next();
+      term.red(`${PS} not ready yet.`)
+      next();
     },
     search: function(params, next, app) {
-        const status = new Spinner('Loading bundles');
-        status.start();
-        const currentPage = 0;
-        npmKeyword('gulpplugin').then(packages => {
-            status.stop();
-            const list = packages.map((p) => {
-                return `${p.name} - ${p.description}`
-            }).chunk(5);
-            term.singleColumnMenu(
-              list[currentPage],
-              function(error, response) {
-                if (response) {
-                  console.log('sl',response)
-                }
-                next();
-              })
-            });
+      const status = new Spinner('Loading bundles');
+      status.start();
+
+      npmKeyword('devboy').then(packages => {
+        status.stop();
+        if (packages.length === 0) {
+          term.yellow(`${PS} nothing found...`)
+          return next();
+        }
+        const list = packages.map((p) => {
+          return ` ✒︎ ${p.name} - ${p.description}`
+        });
+
+        UI.pagedList(list, 15, (selection) => {
+          console.log('Now use it ', selection)
+          next();
+        })
+
+      });
     }
 }
 

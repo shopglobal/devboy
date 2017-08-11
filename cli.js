@@ -11,17 +11,18 @@ const term = require('terminal-kit').terminal;
 const parser = require('yargs-parser')
 const Configstore = require('configstore')
 const clear  = require('clear');
-const figlet = require('figlet');
+
+const UI = require('./libs/ui/form')
 
 /**
- * Helper functions 
+ * Helper functions
  */
 function isFunction(obj) {
   return !!(obj && obj.constructor && obj.call && obj.apply);
 };
 
 /*
- * Variables 
+ * Variables
  */
 const bundleDirectory = './bundle';
 const autoComplete = [];
@@ -74,18 +75,28 @@ function commandContext(name) {
   return app;
 }
 
+function colorCommand(token, isEndOfInput, previousTokens, term, config) {
+  if (previousTokens.length === 0) {
+    return term.green;
+  }
+  if (previousTokens.length === 1) {
+    return term.magenta;
+  }
+}
+
 /**
  * REPL loop
  */
 function loop() {
- 
 
-  term("\n> ");
+
+  term(`\n${UI.baseDirectory()}> `);
   term.inputField(
     {
       autoComplete: autoComplete ,
       autoCompleteHint: true ,
       autoCompleteMenu: true ,
+      tokenHook: colorCommand
     },
     function( error , input ) {
       const argv = parser(input);
@@ -95,7 +106,7 @@ function loop() {
       const params = argv;
       const executable = commands[bundle];
       if (isFunction(executable)) {
-        
+
         executable(command, params, loop, commandContext(bundle));
       } else {
         loop();
@@ -123,6 +134,6 @@ function terminate() {
 
 /* START */
 clear();
-term.red(figlet.textSync('Devboy', { horizontalLayout: 'full'}));
+UI.banner('Devboy', 'cyan');
 term.yellow(`\nWorking directory: ${path.resolve(process.cwd())}`);
 loop();

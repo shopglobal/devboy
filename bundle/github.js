@@ -3,66 +3,65 @@ const GitHubApi = require('octonode');
 const CLI = require('clui')
 const Spinner = CLI.Spinner;
 
+const UI = require('../libs/ui/form')
+
 const memory = {};
 
-const PS = `\n>>> Github`;
+const PS = `>>> Github`;
 
 function requireUsernameAndPassword(callback) {
-    const account = {
-        username: undefined,
-        password: undefined
-    };
-    term(`${PS} username: `);
-    term.inputField({}, function(error, input) {
-        if (error) {
-            handleError(error);
-            return callback(account)
-        }
-        account.username = input;
+    const questions = [
+      {
+        name: 'username',
+        description: `${PS} username`
+      },
+      {
+        name: 'password',
+        description: `${PS} password`,
+        password: true
+      }
+    ];
 
-        term(`${PS} password: `);
-        term.inputField({ echo: false }, function(error, input) {
-            if (error) {
-                handleError(error);
-            }
-            account.password = input;
-            return callback(account)
-        })
+    UI.wizzard(questions, (response) => {
+      if (response.error) { handleError(response.error) }
+      return callback(response.data)
     })
+
 }
 
 function createRepositoryForm(callback) {
-    const newRepo = {
-        name: '',
-        description: '',
-        private: false,
-        auto_init: true,
+  const newRepo = {
+    name: '',
+    description: '',
+    private: false,
+    auto_init: true,
+  }
+  const questions = [
+    {
+      name: 'name',
+      description: `${PS} name`
+    },
+    {
+      name: 'description',
+      description: `${PS} description`
     }
-    term(`${PS} repository name: `)
-    term.inputField({}, function(error, input) {
-        if (error) {
-            handleError(error)
-            return callback()
-        }
-        newRepo.name = input;
-        term(`${PS} repository description: `)
-        term.inputField({}, function(error, input) {
-            if (error) {
-                handleError(error)
-                return callback()
-            }
-            newRepo.description = input;
+  ];
 
-            callback(newRepo);
-        })
-    })
+  UI.wizzard(questions, (response) => {
+    if (response.error) {
+      handleError(response.error)
+      return callback()
+    }
+
+    callback(Object.assign({}, newRepo, response.data))
+  })
 }
 
 function auth(config) {
     const token = config.get('token');
     if (token) {
         return GitHubApi.client(token)
-    } 
+    }
     term.red(`${PS} you need to authenticate first`);
     return undefined
 }
@@ -97,7 +96,7 @@ const interface = {
         requireUsernameAndPassword((account) => {
             const status = new Spinner(`Authenticating you, please wait...`);
             status.start();
-            
+
             try {
                 const scopes =  {
                     scopes: ['user', 'public_repo', 'repo'],
@@ -120,7 +119,7 @@ const interface = {
                         return next()
                     }
                 )
-    
+
             } catch(e) {
                 status.stop();
                 term.red(`${PS} ! catch error `)
@@ -204,7 +203,7 @@ const interface = {
                     next();
                 }
 
-            }) 
+            })
 
         } else {
             next();
